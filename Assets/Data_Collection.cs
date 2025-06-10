@@ -75,7 +75,7 @@ public class TrackingLogger : MonoBehaviour
 
 
     // Attrribute, wenn man per Code UI-Elemente erkennen will, auf die die Person gerade schaut
-    public GraphicRaycaster uiRaycaster;
+    public GraphicRaycaster mapCanvas;
     public EventSystem eventSystem;
 
 
@@ -85,9 +85,10 @@ public class TrackingLogger : MonoBehaviour
 
 
     // Attribute genutzt in FixedUpdate, um in regelmäßigen (physisch orientierten) Zeitintervallen die Speicherung durchzunehmen
-    private float timer = 0f;
-    public float loggingInterval = 0.2f; // 1 ist Sekundentakt, 5 mal die Sekunde wird gespeichert
+    // 1 ist Sekundentakt, 5 mal die Sekunde wird gespeichert
 
+    // TODO: funktionniert das, brauche ich nextLogTime?
+    private float nextLogTime;
 
     /*
     Die Methode GetArg() bekommt vom PythonSkript Daten übergeben und gibt sie als string zurück.
@@ -127,7 +128,7 @@ public class TrackingLogger : MonoBehaviour
         PointerEventData pointerData = new PointerEventData(eventSystem);
         pointerData.position = new Vector2(Screen.width / 2, Screen.height / 2); // Blickzentrum
         List<RaycastResult> results = new List<RaycastResult>();
-        uiRaycaster.Raycast(pointerData, results);
+        mapCanvas.Raycast(pointerData, results);
         if (results.Count > 0)
         {
             return results[0].gameObject.name;
@@ -164,17 +165,16 @@ public class TrackingLogger : MonoBehaviour
     {
         sessionStartTime = Time.time;
 
-        string playerKey = "1";
+    
 
         // Kommandozeilenparameter auslesen
-        /*string playerKey = GetArg("--playerKey");
+        string playerKey = "4";
 
         if (string.IsNullOrEmpty(playerKey))
         {
             Debug.LogError("No --playerKey given! Please provide a participant ID.");
             playerKey = "Unknown";
         }
-        */
 
         currentData.participantId = playerKey;
 
@@ -194,10 +194,9 @@ public class TrackingLogger : MonoBehaviour
     */
     void FixedUpdate()
     {
-        timer += Time.fixedDeltaTime;
-
-        if (timer >= loggingInterval)
-        {
+        
+        // von if zu while-Schleife gewechselt, weil so mit Frame Drops umgeangen werden kann
+        
             // Time
             float elapsedTime = Time.time - sessionStartTime;
 
@@ -205,7 +204,7 @@ public class TrackingLogger : MonoBehaviour
             // FALLS SZENE BLACK SCREEN IST, DANN RETURN
             // Todo: Platzhalter
             currentScene = SceneManager.GetActiveScene().name;
-            if (currentScene == "Pipipause")
+            if (currentScene == "Pipipause" || currentScene == "Tutorial")
             {
                 return;
             }
@@ -216,6 +215,9 @@ public class TrackingLogger : MonoBehaviour
             bool isHoldingTrigger = triggerValue >= 0.1f;
             Vector2 joystickInput = moveAction.action.ReadValue<Vector2>();
             bool isHoldingJoystick = joystickInput.magnitude > 0.1f;
+
+            Debug.Log($"Trigger Value: {triggerValue}, Joystick Magnitude: {joystickInput.magnitude}");
+
             if (isHoldingTrigger && !isHoldingJoystick)
             {
                 mapActive = true;
@@ -226,17 +228,18 @@ public class TrackingLogger : MonoBehaviour
                 mapActive = false;
                 currentControllerInput = "Joystick";
             }
-            else if (!(isHoldingTrigger && isHoldingJoystick))
+            else if (isHoldingTrigger && isHoldingJoystick)
             {
-                currentControllerInput = "No Input";
-                mapActive = false;
-            }
-            else
-            { // Joystick und Trigger beide gleichzeitig gedrückt
+                // Joystick und Trigger beide gleichzeitig gedrückt
                 mapActive = true;
                 currentControllerInput = "Trigger + Joystick";
             }
-            
+            else
+            { 
+                currentControllerInput = "No Input";
+                mapActive = false;
+            }
+
 
             // Raycast-basierte Blickerkennung
             string gazeTargetName = mapActive ? DetectUIElement() : DetectLookedBuilding();
@@ -278,9 +281,8 @@ public class TrackingLogger : MonoBehaviour
             };
 
             currentData.events.Add(newEvent);
-            timer = 0f;
 
-        }
+         
 
     }
 
@@ -292,7 +294,15 @@ public class TrackingLogger : MonoBehaviour
     void OnApplicationQuit()
     {
         string json = JsonUtility.ToJson(currentData, true);
-        File.WriteAllText(dataPath, json);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
+            File.WriteAllText(dataPath, json);
+        }
+        catch (IOException e)
+        {
+            Debug.LogError("Fehler beim Speichern: " + e.Message);
+        }
         Debug.Log("Daten gespeichert unter: " + dataPath);
     }
 
@@ -312,7 +322,17 @@ public class TrackingLogger : MonoBehaviour
               $"{e.currentScene}";
             csvLines.Add(line);
         }
-        File.WriteAllLines(dataPath, csvLines);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
+            File.WriteAllLines(dataPath, csvLines);
+        }
+        catch (IOException e)
+        {
+            Debug.LogError("Fehler beim Speichern: " + e.Message);
+        }
+
+
         Debug.Log("Daten gespeichert unter: " + dataPath);
         // wenn ich parallel JSON und CSV speichern möchte:
 
@@ -321,4 +341,20 @@ public class TrackingLogger : MonoBehaviour
     }
     */
 }
+
+
+// TODO: Idee bei Absturz
+/*
+void OnDisable()
+{
+    SaveData();
+}
+
+void SaveData()
+{
+    string json = JsonUtility.ToJson(currentData, true);
+    File.WriteAllText(dataPath, json);
+}
+
+*/
 

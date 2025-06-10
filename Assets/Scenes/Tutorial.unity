@@ -1651,6 +1651,14 @@ PrefabInstance:
       propertyPath: m_RightHand
       value: 
       objectReference: {fileID: 289984176}
+    - target: {fileID: 5826056641483426609, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
+      propertyPath: m_TrackedHandModeStarted.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5826056641483426609, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
+      propertyPath: m_TrackedHandModeStarted.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6232745470614056090, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
       propertyPath: m_Height
       value: 0.1
@@ -1732,9 +1740,35 @@ MonoBehaviour:
   m_GameObject: {fileID: 441087507}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Script: {fileID: 11500000, guid: 7eb8100502c379548a8590e76dadde85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  mapCanvas: {fileID: 1356890617}
+  eventSystem: {fileID: 0}
+  moveAction:
+    m_UseReference: 1
+    m_Action:
+      m_Name: Move
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 4cec596c-7b7b-4f97-b543-686b0697d108
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: -5982496924579745919, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  rightTriggerAction:
+    m_UseReference: 1
+    m_Action:
+      m_Name: Right Trigger
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 2b2a6372-31da-42c9-9ce7-9eaa777ba7e5
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: 83097790271614945, guid: c348712bda248c246b8c49b3db54643f, type: 3}
 --- !u!20 &441087512 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 1767192439, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
