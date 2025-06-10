@@ -45,8 +45,7 @@ public class MapPositionUpdater : MonoBehaviour
         forward.Normalize();
 
         float angle = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
-        viewCone.localEulerAngles = new Vector3(0, 0, 180 -angle); // Z-axis for UI rotation
+        viewCone.localEulerAngles = new Vector3(0, 0, -angle); // Z-axis for UI rotation
     }
 }
-
 

@@ -25,12 +25,10 @@ public class MapDisplayController : MonoBehaviour
 
         // Toggle map visibility
         mapCanvas.enabled = triggerHeld;
-        
 
         // Toggle icon visibility along with the map
         if (playerIcon != null)
             playerIcon.gameObject.SetActive(triggerHeld);
     }
 }
-
 
