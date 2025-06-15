@@ -1743,8 +1743,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7eb8100502c379548a8590e76dadde85, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapCanvas: {fileID: 1356890617}
-  eventSystem: {fileID: 0}
+  uiRaycaster: {fileID: 1356890617}
+  eventSystem: {fileID: 2092139009}
   moveAction:
     m_UseReference: 1
     m_Action:
@@ -1769,6 +1769,7 @@ MonoBehaviour:
       m_SingletonActionBindings: []
       m_Flags: 0
     m_Reference: {fileID: 83097790271614945, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  loggingInterval: 0.2
 --- !u!20 &441087512 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 1767192439, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}

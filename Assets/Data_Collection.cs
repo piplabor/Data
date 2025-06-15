@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using Unity.VisualScripting;
 
+
 /*
 In der Klasse Trackinglogger findet die Implementation der Datenspeicherung ab.
 Trackinglogger erbt von Monobehaviour (ist eine Unity-Klasse und wichtig für die Arbeit mit Unity).
@@ -58,12 +59,13 @@ public class TrackingLogger : MonoBehaviour
     [System.Serializable]
     public class ParticipantData
     {
-        public string participantId;
         public List<EventData> events = new List<EventData>();
+        public float pauseDuration; // Zeit in Sekunden, die zwischen den Sessions vergangen ist
     }
 
     // Attribute für EventData
     private ParticipantData currentData = new ParticipantData();
+    private string participantId = "Unknown";
     private float sessionStartTime;
     private string dataPath;
     private string currentControllerInput = "";
@@ -75,7 +77,7 @@ public class TrackingLogger : MonoBehaviour
 
 
     // Attrribute, wenn man per Code UI-Elemente erkennen will, auf die die Person gerade schaut
-    public GraphicRaycaster mapCanvas;
+    public GraphicRaycaster uiRaycaster;
     public EventSystem eventSystem;
 
 
@@ -85,10 +87,15 @@ public class TrackingLogger : MonoBehaviour
 
 
     // Attribute genutzt in FixedUpdate, um in regelmäßigen (physisch orientierten) Zeitintervallen die Speicherung durchzunehmen
-    // 1 ist Sekundentakt, 5 mal die Sekunde wird gespeichert
+    public float loggingInterval = 0.25f; // 1 ist Sekundentakt, 4 mal die Sekunde wird gespeichert
 
-    // TODO: funktionniert das, brauche ich nextLogTime?
+
+    // Attribute für die Zeitmessung
     private float nextLogTime;
+    private int logCount;
+
+    // Attribut zur Speicherung wie lange die Pause zwischen den Sessions geht
+    private float pauseDuration = 0f; // Zeit in Sekunden, die zwischen den Sessions vergangen ist
 
     /*
     Die Methode GetArg() bekommt vom PythonSkript Daten übergeben und gibt sie als string zurück.
@@ -128,7 +135,7 @@ public class TrackingLogger : MonoBehaviour
         PointerEventData pointerData = new PointerEventData(eventSystem);
         pointerData.position = new Vector2(Screen.width / 2, Screen.height / 2); // Blickzentrum
         List<RaycastResult> results = new List<RaycastResult>();
-        mapCanvas.Raycast(pointerData, results);
+        uiRaycaster.Raycast(pointerData, results);
         if (results.Count > 0)
         {
             return results[0].gameObject.name;
@@ -165,18 +172,12 @@ public class TrackingLogger : MonoBehaviour
     {
         sessionStartTime = Time.time;
 
-    
+        nextLogTime = Time.time + loggingInterval;
 
         // Kommandozeilenparameter auslesen
-        string playerKey = "4";
+        string playerKey = "24"; // GetArg("--playerKey");
 
-        if (string.IsNullOrEmpty(playerKey))
-        {
-            Debug.LogError("No --playerKey given! Please provide a participant ID.");
-            playerKey = "Unknown";
-        }
-
-        currentData.participantId = playerKey;
+        participantId = playerKey;
 
         // Speicherpfad
         // Application.persistentDataPath ist ein Unity-Standardpfad, der plattformunabhängig auf einen schreibbaren Speicherort zeigt,
@@ -196,16 +197,25 @@ public class TrackingLogger : MonoBehaviour
     {
         
         // von if zu while-Schleife gewechselt, weil so mit Frame Drops umgeangen werden kann
-        
+        if (Time.time >= nextLogTime)
+        {
             // Time
-            float elapsedTime = Time.time - sessionStartTime;
+            float elapsedTime = logCount * loggingInterval;
 
             // Szene
             // FALLS SZENE BLACK SCREEN IST, DANN RETURN
             // Todo: Platzhalter
             currentScene = SceneManager.GetActiveScene().name;
-            if (currentScene == "Pipipause" || currentScene == "Tutorial")
+            /*
+             * TODO: Kommentar entfernen 
+            if (currentScene == "Tutorial")
             {
+                return;
+            }
+            */
+            if (currentScene == "Pipipause")
+            {
+                pauseDuration += loggingInterval;
                 return;
             }
 
@@ -267,7 +277,7 @@ public class TrackingLogger : MonoBehaviour
 
             EventData newEvent = new EventData()
             {
-                participantId = currentData.participantId,
+                participantId = participantId,
                 timestamp = elapsedTime,
                 // postion und rotation werden direkt im Objekt initiiert
                 position = new Vector3Serializable(transform.position),
@@ -282,17 +292,27 @@ public class TrackingLogger : MonoBehaviour
 
             currentData.events.Add(newEvent);
 
-         
+            // Nächstes exaktes Ziel berechnen:
+            nextLogTime += loggingInterval;
+            logCount++;
+        }
 
     }
+
+
 
     /*
     Wird einmal beim Beenden der Session ausgeführt.
     Hier: Es wird die Liste ller gesammelten Daten als JSON serialisiert.
     Die Datei wird in den Application.persistentDataPath geschrieben.
     */
+    
+    
     void OnApplicationQuit()
     {
+        // Nur zum Schluss hinzugefügt wie lange die Pause zwischen den Sessions war
+        currentData.pauseDuration = pauseDuration;
+
         string json = JsonUtility.ToJson(currentData, true);
         try
         {
@@ -306,41 +326,8 @@ public class TrackingLogger : MonoBehaviour
         Debug.Log("Daten gespeichert unter: " + dataPath);
     }
 
-    // wenn ich das als CSV speichern möchte:
-    /*
-    void OnApplicationQuit()
-    {
-        List<string> csvLines = new List<string>();
-        // Header
-        csvLines.Add("timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeTargetVectorX,gazeTargetVectorY,gazeTargetVectorZ,gazeX,gazeY,scene");
-        foreach (var e in currentData.events)
-        {
-            string line = $"{e.timestamp:F5},{e.position.x:F4},{e.position.y:F4},{e.position.z:F4}," +
-              $"{e.rotationEuler.x:F4},{e.rotationEuler.y:F4},{e.rotationEuler.z:F4}," +
-              $"{e.currentControllerInput},{e.mapOpened},{e.gazeTargetName},{e.gazeTargetVector.x:F4}," +
-              $"{e.gazeTargetVector.y:F4},{e.gazeTargetVector.z:F4},{e.gazePoint.x:F4},{e.gazePoint.y:F4}," +
-              $"{e.currentScene}";
-            csvLines.Add(line);
-        }
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
-            File.WriteAllLines(dataPath, csvLines);
-        }
-        catch (IOException e)
-        {
-            Debug.LogError("Fehler beim Speichern: " + e.Message);
-        }
-
-
-        Debug.Log("Daten gespeichert unter: " + dataPath);
-        // wenn ich parallel JSON und CSV speichern möchte:
-
-        //File.WriteAllLines(dataPath.Replace(".json", ".csv"), csvLines);
-        //Debug.Log("CSV gespeichert unter: " + dataPath.Replace(".json", ".csv"));
-    }
-    */
 }
+
 
 
 // TODO: Idee bei Absturz
