@@ -171,7 +171,6 @@ public class TrackingLogger : MonoBehaviour
     void Start()
     {
         sessionStartTime = Time.time;
-
         nextLogTime = Time.time + loggingInterval;
 
         // Kommandozeilenparameter auslesen
@@ -185,6 +184,24 @@ public class TrackingLogger : MonoBehaviour
         dataPath = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}.json");
 
         Debug.Log("Tracking gestartet für Teilnehmer: " + playerKey);
+    }
+
+    /* Wenn die Methode SaveData() aufgerufen wird, wird die aktuelle Sitzung in eine JSON-Datei gespeichert.
+     * Dient als Zusätzliche Absicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt.
+     * 
+     */
+    private void SaveData()
+    {
+        string json = JsonUtility.ToJson(currentData, true);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
+            File.WriteAllText(dataPath, json);
+        }
+        catch (IOException e)
+        {
+            Debug.LogError("Fehler beim Speichern: " + e.Message);
+        }
     }
 
 
@@ -295,6 +312,12 @@ public class TrackingLogger : MonoBehaviour
             // Nächstes exaktes Ziel berechnen:
             nextLogTime += loggingInterval;
             logCount++;
+
+            // zusätzlcihe Speicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
+            if (logCount % (int)(60f / loggingInterval) == 0) // alle 60 Sekunden
+            {
+                SaveData();
+            }
         }
 
     }
@@ -327,21 +350,4 @@ public class TrackingLogger : MonoBehaviour
     }
 
 }
-
-
-
-// TODO: Idee bei Absturz
-/*
-void OnDisable()
-{
-    SaveData();
-}
-
-void SaveData()
-{
-    string json = JsonUtility.ToJson(currentData, true);
-    File.WriteAllText(dataPath, json);
-}
-
-*/
 
