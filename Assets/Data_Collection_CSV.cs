@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using Unity.VisualScripting;
+using System.Text;
 
 
 /*
@@ -172,7 +173,7 @@ public class TrackingLogger : MonoBehaviour
         nextLogTime = Time.time + loggingInterval;
 
         // Kommandozeilenparameter auslesen
-        string playerKey = "26"; // GetArg("--playerKey");
+        string playerKey = "30"; // GetArg("--playerKey");
 
         participantId = playerKey;
 
@@ -324,6 +325,57 @@ public class TrackingLogger : MonoBehaviour
     */
     void OnApplicationQuit()
     {
+        StringBuilder csv = new StringBuilder();
+
+        // Kopfzeile
+        csv.AppendLine("participantId,timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeVecX,gazeVecY,gazeVecZ,gazePointX,gazePointY,currentScene");
+
+        try
+        {
+            // Einträge schreiben
+            foreach (var e in currentData.events)
+            {
+                string line = string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture, // wichtig für Dezimalpunkt
+                    "{0},{1:F2},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16}",
+                    e.participantId,
+                    e.timestamp,
+                    e.position.x, e.position.y, e.position.z,
+                    e.rotationEuler.x, e.rotationEuler.y, e.rotationEuler.z,
+                    e.currentControllerInput,
+                    e.mapOpened,
+                    EscapeCSV(e.gazeTargetName),
+                    e.gazeTargetVector.x, e.gazeTargetVector.y, e.gazeTargetVector.z,
+                    e.gazePoint.x, e.gazePoint.y,
+                    EscapeCSV(e.currentScene)
+                );
+                csv.AppendLine(line);
+            }
+
+            File.WriteAllText(dataPath, csv.ToString());
+        }
+        catch (IOException e)
+        {
+            Debug.LogError("Fehler beim Speichern: " + e.Message);
+        }
+
+        Debug.Log("Daten gespeichert unter: " + dataPath);
+    }
+
+    private string EscapeCSV(string input)
+    {
+        if (input.Contains(",") || input.Contains("\"") || input.Contains("\n"))
+        {
+            return "\"" + input.Replace("\"", "\"\"") + "\""; // doppelte Anführungszeichen nach CSV-Standard
+        }
+        return input;
+    }
+
+ 
+
+    /*
+    void OnApplicationQuit()
+    {
 
         // Header-Zeile
         string[] headers = new string[] {
@@ -343,39 +395,67 @@ public class TrackingLogger : MonoBehaviour
         sb.AppendLine(string.Join(",", headers));
 
         // Datenzeilen schreiben
-        foreach (var data in trackingDataList)
+        foreach (var data in currentData.events)
         {
             string[] row = new string[] {
                 data.participantId.ToString(),
                 data.timestamp.ToString("F3"),
-                data.posX.ToString("F3"),
-                data.posY.ToString("F3"),
-                data.posZ.ToString("F3"),
-                data.rotX.ToString("F3"),
-                data.rotY.ToString("F3"),
-                data.rotZ.ToString("F3"),
-                data.controllerInput,
+                data.position.x.ToString("F3"),
+                data.position.y.ToString("F3"),
+                data.position.z.ToString("F3"),
+                data.rotationEuler.x.ToString("F3"),
+                data.rotationEuler.y.ToString("F3"),
+                data.rotationEuler.z.ToString("F3"),
+                data.currentControllerInput,
                 data.mapOpened.ToString(),
                 data.gazeTargetName,
-                data.gazeVecX.ToString("F3"),
-                data.gazeVecY.ToString("F3"),
-                data.gazeVecZ.ToString("F3"),
-                data.gazePointX.ToString("F3"),
-                data.gazePointY.ToString("F3"),
+                data.gazeTargetVector.x.ToString("F3"),
+                data.gazeTargetVector.y.ToString("F3"),
+                data.gazeTargetVector.z.ToString("F3"),
+                data.gazePoint.x.ToString("F3"),
+                data.gazePoint.y.ToString("F3"),
                 data.currentScene
             };
             sb.AppendLine(string.Join(",", row));
         }
 
         File.WriteAllText(dataPath, sb.ToString(), Encoding.UTF8);
-        Debug.Log("Tracking data saved to: " + filePath);
+        Debug.Log("Tracking data saved to: " + dataPath);
     }
+    */
 
 }
 
 
 
+
+
 /*
+ *   [System.Serializable]
+    public class EventData
+    {
+        public string participantId; // wird aktuell nicht bei jeder Iteration angezeigt, sondern die Datei wird so abgespeichert
+        public float timestamp; // wie viel Zeit ab 0:00:00 vergangen ist
+        public Vector3Serializable position; // Wo ist die Person gerade (3D)
+        public Vector3Serializable rotationEuler; // Wie ist der Kopf rotiert (3D)
+        public string currentControllerInput; // entweder Trigger oder Joystick oder nichts
+        public bool mapOpened; // Ob Karte gerade geöffnet ist
+        // gazeTarget ist das, was in Blickrichtung der Kamera liegt – also dorthin, wo du „geradeaus“ schaust (unterteilt in gazeTargetName und -vector)
+        public string gazeTargetName; // gazeTargetName spuckt den Blick als Gebäudenamen aus
+        public Vector3Serializable gazeTargetVector; // gazeTargetVector spuckt den Blick als Vektor aus
+        public Vector2 gazePoint; // x/y Blick auf den Bildschirm, Eyetracking!!
+        public string currentScene; // ob Schloss oder Marktplatz und welcher
+    }
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
  * public class TrackingLogger : MonoBehaviour
 {
     public List<string[]> trackingDataList = new List<string[]>();
@@ -415,7 +495,7 @@ public class TrackingLogger : MonoBehaviour
 
 
 
-
+*/
 
 
 
@@ -495,19 +575,8 @@ public class TrackingLogger : MonoBehaviour
  * 
  * 
  * 
-  [System.Serializable]
-    public class EventData
-    {
-        public string participantId; // wird aktuell nicht bei jeder Iteration angezeigt, sondern die Datei wird so abgespeichert
-        public float timestamp; // wie viel Zeit ab 0:00:00 vergangen ist
-        public Vector3Serializable position; // Wo ist die Person gerade (3D)
-        public Vector3Serializable rotationEuler; // Wie ist der Kopf rotiert (3D)
-        public string currentControllerInput; // entweder Trigger oder Joystick oder nichts
-        public bool mapOpened; // Ob Karte gerade geöffnet ist
-        // gazeTarget ist das, was in Blickrichtung der Kamera liegt – also dorthin, wo du „geradeaus“ schaust (unterteilt in gazeTargetName und -vector)
-        public string gazeTargetName; // gazeTargetName spuckt den Blick als Gebäudenamen aus
-        public Vector3Serializable gazeTargetVector; // gazeTargetVector spuckt den Blick als Vektor aus
-        public Vector2 gazePoint; // x/y Blick auf den Bildschirm, Eyetracking!!
-        public string currentScene; // ob Schloss oder Marktplatz und welcher
-    }
 
+
+*/
+
+// XRI Left Locomotion/Move
