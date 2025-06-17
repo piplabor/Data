@@ -1,4 +1,4 @@
-using UnityEngine; //Importiert Unity-spezifische Klassen
+﻿using UnityEngine; //Importiert Unity-spezifische Klassen
 using System.Collections.Generic; //Für Listen und generische Datenstrukturen wie List<T>
 using System.IO; // Um mit Dateien zu arbeiten – z. B. File.WriteAllText() 
 using UnityEngine.EventSystems;
@@ -73,22 +73,17 @@ public class TrackingLogger : MonoBehaviour
 
     // alternativ ohne SceneManager:
     private string currentScene = "";
-    // Überlege dir, ob du scene dynamisch über SceneManager.GetActiveScene().name holst.
-
 
     // Attrribute, wenn man per Code UI-Elemente erkennen will, auf die die Person gerade schaut
     public GraphicRaycaster uiRaycaster;
     public EventSystem eventSystem;
 
-
     // Attribute zum Abspeichern der Controller Inputs
     public InputActionProperty moveAction; // Left joystick input
     public InputActionProperty rightTriggerAction; // Right Trigger Input
 
-
     // Attribute genutzt in FixedUpdate, um in regelmäßigen (physisch orientierten) Zeitintervallen die Speicherung durchzunehmen
-    public float loggingInterval = 0.25f; // 1 ist Sekundentakt, 4 mal die Sekunde wird gespeichert
-
+    public float loggingInterval = 0.25f; // 4 mal die Sekunde wird gespeichert
 
     // Attribute für die Zeitmessung
     private float nextLogTime;
@@ -110,6 +105,7 @@ public class TrackingLogger : MonoBehaviour
         return null;
     }
 
+
     /*
     Die Methode DetectLookedBuilding erkennt in der Welt. wo man geradeaus hinguckt (Blickrichtung).
     Dabei wird ein string vom Namen des Objektes gespeichert, z.B. Gebäude 
@@ -124,6 +120,7 @@ public class TrackingLogger : MonoBehaviour
         }
         return "No building";
     }
+
 
     /*
     Die Methode DetectUIElement() erkennt in der Karte, wo man geradeaus hinguckt.
@@ -142,6 +139,7 @@ public class TrackingLogger : MonoBehaviour
         }
         return "No UI-Element";
     }
+
 
     /*
     Die Methode DetectLookedPoint() erkennt in der Karte, wo man geradeaus hinguckt und speichert das als 3D-Vektor ab.
@@ -181,14 +179,15 @@ public class TrackingLogger : MonoBehaviour
         // Speicherpfad
         // Application.persistentDataPath ist ein Unity-Standardpfad, der plattformunabhängig auf einen schreibbaren Speicherort zeigt,
         // z. B.: unter Windows: C:/Users/USERNAME/AppData/LocalLow/CompanyName/ProductName
-        dataPath = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}.json");
+        dataPath = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}.csv");
 
         Debug.Log("Tracking gestartet für Teilnehmer: " + playerKey);
     }
 
-    /* Wenn die Methode SaveData() aufgerufen wird, wird die aktuelle Sitzung in eine JSON-Datei gespeichert.
-     * Dient als Zusätzliche Absicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt.
-     * 
+
+    /* 
+    Wenn die Methode SaveData() aufgerufen wird, wird die aktuelle Sitzung in eine JSON-Datei gespeichert.
+    Dient als Zusätzliche Absicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
      */
     private void SaveData()
     {
@@ -212,24 +211,19 @@ public class TrackingLogger : MonoBehaviour
     */
     void FixedUpdate()
     {
-        
-        // von if zu while-Schleife gewechselt, weil so mit Frame Drops umgeangen werden kann
         if (Time.time >= nextLogTime)
         {
             // Time
             float elapsedTime = logCount * loggingInterval;
 
             // Szene
-            // FALLS SZENE BLACK SCREEN IST, DANN RETURN
             // Todo: Platzhalter
             currentScene = SceneManager.GetActiveScene().name;
-            /*
-             * TODO: Kommentar entfernen 
+
             if (currentScene == "Tutorial")
             {
                 return;
             }
-            */
             if (currentScene == "Pipipause")
             {
                 pauseDuration += loggingInterval;
@@ -262,7 +256,7 @@ public class TrackingLogger : MonoBehaviour
                 currentControllerInput = "Trigger + Joystick";
             }
             else
-            { 
+            {
                 currentControllerInput = "No Input";
                 mapActive = false;
             }
@@ -291,7 +285,6 @@ public class TrackingLogger : MonoBehaviour
                 }
             }
             */
-
             EventData newEvent = new EventData()
             {
                 participantId = participantId,
@@ -314,7 +307,7 @@ public class TrackingLogger : MonoBehaviour
             logCount++;
 
             // zusätzlcihe Speicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
-            if (logCount % (int)(60f / loggingInterval) == 0) // alle 60 Sekunden
+            if (logCount % (int)(30f / loggingInterval) == 0) // alle 30 Sekunden
             {
                 SaveData();
             }
@@ -323,31 +316,54 @@ public class TrackingLogger : MonoBehaviour
     }
 
 
-
     /*
     Wird einmal beim Beenden der Session ausgeführt.
-    Hier: Es wird die Liste ller gesammelten Daten als JSON serialisiert.
+    Hier: Es wird die Liste aller gesammelten Daten als CSV gespeichert.
     Die Datei wird in den Application.persistentDataPath geschrieben.
     */
-    
-    
     void OnApplicationQuit()
     {
-        // Nur zum Schluss hinzugefügt wie lange die Pause zwischen den Sessions war
-        currentData.pauseDuration = pauseDuration;
-
-        string json = JsonUtility.ToJson(currentData, true);
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
-            File.WriteAllText(dataPath, json);
+
+            using (StreamWriter writer = new StreamWriter(dataPath))
+            {
+                // CSV-Header schreiben
+                writer.WriteLine("participantId,timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeVecX,gazeVecY,gazeVecZ,gazePointX,gazePointY,currentScene");
+
+                // Jede EventData-Zeile schreiben
+                foreach (var e in currentData.events)
+                {
+                    string line = string.Format(
+                        "{0},{1:F3},{2:F3},{3:F3},{4:F3},{5:F3},{6:F3},{7:F3},{8},{9},{10},{11:F3},{12:F3},{13:F3},{14:F3},{15:F3},{16}",
+                        e.participantId,
+                        e.timestamp,
+                        e.position.x, e.position.y, e.position.z,
+                        e.rotationEuler.x, e.rotationEuler.y, e.rotationEuler.z,
+                        e.currentControllerInput,
+                        e.mapOpened,
+                        e.gazeTargetName,
+                        e.gazeTargetVector.x, e.gazeTargetVector.y, e.gazeTargetVector.z,
+                        e.gazePoint.x, e.gazePoint.y,
+                        e.currentScene
+                    );
+
+                    writer.WriteLine(line);
+                }
+
+                // Pause-Dauer als letzte Zeile
+                writer.WriteLine($"# PauseDuration: {currentData.pauseDuration:F3} seconds");
+            }
+
+            Debug.Log("CSV gespeichert unter: " + dataPath);
         }
         catch (IOException e)
         {
-            Debug.LogError("Fehler beim Speichern: " + e.Message);
+            Debug.LogError("Fehler beim Speichern als CSV: " + e.Message);
         }
-        Debug.Log("Daten gespeichert unter: " + dataPath);
     }
+
 
 }
 
