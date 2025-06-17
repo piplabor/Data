@@ -1725,6 +1725,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1767192433, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
       insertIndex: -1
       addedObject: {fileID: 441087508}
+    - targetCorrespondingSourceObject: {fileID: 1767192433, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 441087516}
   m_SourcePrefab: {fileID: 100100000, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
 --- !u!1 &441087507 stripped
 GameObject:
@@ -1769,7 +1772,7 @@ MonoBehaviour:
       m_SingletonActionBindings: []
       m_Flags: 0
     m_Reference: {fileID: 83097790271614945, guid: c348712bda248c246b8c49b3db54643f, type: 3}
-  loggingInterval: 0.2
+  loggingInterval: 0.25
 --- !u!20 &441087512 stripped
 Camera:
   m_CorrespondingSourceObject: {fileID: 1767192439, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
@@ -1780,6 +1783,45 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1767192434, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}
   m_PrefabInstance: {fileID: 441087506}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &441087516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 441087507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 541e874c956de2d4b861647b1941e0cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uiRaycaster: {fileID: 1356890617}
+  eventSystem: {fileID: 2092139009}
+  moveAction:
+    m_UseReference: 1
+    m_Action:
+      m_Name: Move
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 717c92b8-0780-494f-b7dd-07e25af8ff00
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: -5982496924579745919, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  rightTriggerAction:
+    m_UseReference: 1
+    m_Action:
+      m_Name: Right Trigger
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: be3aeef3-4f3f-44ba-8153-0604953ae387
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: 83097790271614945, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  loggingInterval: 0.25
 --- !u!114 &448919775 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 153982007679157697, guid: a11c5c61d8aed9a47b1eea64bfd2f786, type: 3}

@@ -15,7 +15,7 @@ Das C#-Protokoll wird an das Hauptkamera-Objekts des Spielers in unity hinzugef�
 Die Klasse Trackinglogger enthält die Klassen: Eventdata, Vector3Serializable, ParticipantData
 Die Klasse Trackinglogger enthält die Methoden: GetArg(), DetectLookedBuilding(), DetectUIElement(), DetectLookedPoint(), Start(), FixedUpdate(), OnApplicationQuit()
 */
-public class TrackingLogger : MonoBehaviour
+public class TrackingLoggerJSON : MonoBehaviour
 {
     // System.Serializable ist wichtig, damit die Daten lokal in einem Ordner gespeichert werden können
     [System.Serializable]
@@ -172,7 +172,7 @@ public class TrackingLogger : MonoBehaviour
         nextLogTime = Time.time + loggingInterval;
 
         // Kommandozeilenparameter auslesen
-        string playerKey = "24"; // GetArg("--playerKey");
+        string playerKey = "25"; // GetArg("--playerKey");
 
         participantId = playerKey;
 
@@ -219,11 +219,13 @@ public class TrackingLogger : MonoBehaviour
             // Szene
             // Todo: Platzhalter
             currentScene = SceneManager.GetActiveScene().name;
-  
+            // Todo: Auskommentieren
+            /*
             if (currentScene == "Tutorial")
             {
                 return;
             }
+            */
             if (currentScene == "Pipipause")
             {
                 pauseDuration += loggingInterval;
@@ -271,8 +273,6 @@ public class TrackingLogger : MonoBehaviour
 
             // Blickposition als Dummy (kann durch echtes EyeTracking ersetzt werden)
             Vector2 gazePos = new Vector2(0.5f, 0.5f); // Todo: Platzhalter
-
-
 
             // Todo: hier wird Eyetracking implementiert
             /*

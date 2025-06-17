@@ -219,11 +219,13 @@ public class TrackingLogger : MonoBehaviour
             // Szene
             // Todo: Platzhalter
             currentScene = SceneManager.GetActiveScene().name;
-
+            // Todo: Auskommentieren
+            /*
             if (currentScene == "Tutorial")
             {
                 return;
             }
+            */
             if (currentScene == "Pipipause")
             {
                 pauseDuration += loggingInterval;
@@ -272,8 +274,6 @@ public class TrackingLogger : MonoBehaviour
             // Blickposition als Dummy (kann durch echtes EyeTracking ersetzt werden)
             Vector2 gazePos = new Vector2(0.5f, 0.5f); // Todo: Platzhalter
 
-
-
             // Todo: hier wird Eyetracking implementiert
             /*
             InputDevice device = InputDevices.GetDeviceAtXRNode(XRNode.CenterEye);
@@ -285,6 +285,7 @@ public class TrackingLogger : MonoBehaviour
                 }
             }
             */
+
             EventData newEvent = new EventData()
             {
                 participantId = participantId,
