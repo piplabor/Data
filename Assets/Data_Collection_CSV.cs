@@ -172,7 +172,7 @@ public class TrackingLogger : MonoBehaviour
         nextLogTime = Time.time + loggingInterval;
 
         // Kommandozeilenparameter auslesen
-        string playerKey = "24"; // GetArg("--playerKey");
+        string playerKey = "26"; // GetArg("--playerKey");
 
         participantId = playerKey;
 
@@ -188,7 +188,7 @@ public class TrackingLogger : MonoBehaviour
     /* 
     Wenn die Methode SaveData() aufgerufen wird, wird die aktuelle Sitzung in eine JSON-Datei gespeichert.
     Dient als Zusätzliche Absicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
-     */
+    */
     private void SaveData()
     {
         string json = JsonUtility.ToJson(currentData, true);
@@ -324,14 +324,134 @@ public class TrackingLogger : MonoBehaviour
     */
     void OnApplicationQuit()
     {
+
+        // Header-Zeile
+        string[] headers = new string[] {
+            "participantId", "timestamp",
+            "posX", "posY", "posZ",
+            "rotX", "rotY", "rotZ",
+            "controllerInput", "mapOpened",
+            "gazeTargetName",
+            "gazeVecX", "gazeVecY", "gazeVecZ",
+            "gazePointX", "gazePointY",
+            "currentScene"
+        };
+
+        StringBuilder sb = new StringBuilder();
+
+        // Header schreiben
+        sb.AppendLine(string.Join(",", headers));
+
+        // Datenzeilen schreiben
+        foreach (var data in trackingDataList)
+        {
+            string[] row = new string[] {
+                data.participantId.ToString(),
+                data.timestamp.ToString("F3"),
+                data.posX.ToString("F3"),
+                data.posY.ToString("F3"),
+                data.posZ.ToString("F3"),
+                data.rotX.ToString("F3"),
+                data.rotY.ToString("F3"),
+                data.rotZ.ToString("F3"),
+                data.controllerInput,
+                data.mapOpened.ToString(),
+                data.gazeTargetName,
+                data.gazeVecX.ToString("F3"),
+                data.gazeVecY.ToString("F3"),
+                data.gazeVecZ.ToString("F3"),
+                data.gazePointX.ToString("F3"),
+                data.gazePointY.ToString("F3"),
+                data.currentScene
+            };
+            sb.AppendLine(string.Join(",", row));
+        }
+
+        File.WriteAllText(dataPath, sb.ToString(), Encoding.UTF8);
+        Debug.Log("Tracking data saved to: " + filePath);
+    }
+
+}
+
+
+
+/*
+ * public class TrackingLogger : MonoBehaviour
+{
+    public List<string[]> trackingDataList = new List<string[]>();
+
+    void OnApplicationQuit()
+    {
+
+        string[] headers = new string[] {
+            "participantId", "timestamp",
+            "posX", "posY", "posZ",
+            "rotX", "rotY", "rotZ",
+            "controllerInput", "mapOpened",
+            "gazeTargetName",
+            "gazeVecX", "gazeVecY", "gazeVecZ",
+            "gazePointX", "gazePointY",
+            "currentScene"
+        };
+
+        StringBuilder sb = new StringBuilder();
+
+        // Header schreiben
+        sb.AppendLine(string.Join(",", headers));
+
+        // Zeilen schreiben
+        foreach (string[] row in trackingDataList)
+        {
+            sb.AppendLine(string.Join(",", row));
+        }
+
+        File.WriteAllText(dataPath, sb.ToString(), Encoding.UTF8);
+        Debug.Log("Tracking data saved to: " + filePath);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ *     void OnApplicationQuit()
+    {
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(dataPath));
 
             using (StreamWriter writer = new StreamWriter(dataPath))
             {
+
+                string[] headers = {
+                    "participantId", "timestamp",
+                    "posX", "posY", "posZ",
+                    "rotX", "rotY", "rotZ",
+                    "controllerInput", "mapOpened",
+                    "gazeTargetName", "gazeVecX", "gazeVecY", "gazeVecZ",
+                    "gazePointX", "gazePointY", "gazePointZ",
+                    "currentScene"
+                };
                 // CSV-Header schreiben
-                writer.WriteLine("participantId,timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeVecX,gazeVecY,gazeVecZ,gazePointX,gazePointY,currentScene");
+                writer.WriteLine(headers);
 
                 // Jede EventData-Zeile schreiben
                 foreach (var e in currentData.events)
@@ -365,6 +485,29 @@ public class TrackingLogger : MonoBehaviour
         }
     }
 
-
-}
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+  [System.Serializable]
+    public class EventData
+    {
+        public string participantId; // wird aktuell nicht bei jeder Iteration angezeigt, sondern die Datei wird so abgespeichert
+        public float timestamp; // wie viel Zeit ab 0:00:00 vergangen ist
+        public Vector3Serializable position; // Wo ist die Person gerade (3D)
+        public Vector3Serializable rotationEuler; // Wie ist der Kopf rotiert (3D)
+        public string currentControllerInput; // entweder Trigger oder Joystick oder nichts
+        public bool mapOpened; // Ob Karte gerade geöffnet ist
+        // gazeTarget ist das, was in Blickrichtung der Kamera liegt – also dorthin, wo du „geradeaus“ schaust (unterteilt in gazeTargetName und -vector)
+        public string gazeTargetName; // gazeTargetName spuckt den Blick als Gebäudenamen aus
+        public Vector3Serializable gazeTargetVector; // gazeTargetVector spuckt den Blick als Vektor aus
+        public Vector2 gazePoint; // x/y Blick auf den Bildschirm, Eyetracking!!
+        public string currentScene; // ob Schloss oder Marktplatz und welcher
+    }
 
