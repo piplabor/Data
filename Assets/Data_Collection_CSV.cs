@@ -7,6 +7,9 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using Unity.VisualScripting;
 using System.Text;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System;
 
 
 /*
@@ -14,7 +17,7 @@ In der Klasse Trackinglogger findet die Implementation der Datenspeicherung ab.
 Trackinglogger erbt von Monobehaviour (ist eine Unity-Klasse und wichtig für die Arbeit mit Unity).
 Das C#-Protokoll wird an das Hauptkamera-Objekts des Spielers in unity hinzugefügt und loggt automatisch.
 Die Klasse Trackinglogger enthält die Klassen: Eventdata, Vector3Serializable, ParticipantData
-Die Klasse Trackinglogger enthält die Methoden: GetArg(), DetectLookedBuilding(), DetectUIElement(), DetectLookedPoint(), Start(), FixedUpdate(), OnApplicationQuit()
+Die Klasse Trackinglogger enthält die Methoden: GetArg(), DetectLookedObject(), DetectLookedPoint(), Start(), FixedUpdate(), OnApplicationQuit()
 */
 public class TrackingLogger : MonoBehaviour
 {
@@ -31,7 +34,7 @@ public class TrackingLogger : MonoBehaviour
         // gazeTarget ist das, was in Blickrichtung der Kamera liegt – also dorthin, wo du „geradeaus“ schaust (unterteilt in gazeTargetName und -vector)
         public string gazeTargetName; // gazeTargetName spuckt den Blick als Gebäudenamen aus
         public Vector3Serializable gazeTargetVector; // gazeTargetVector spuckt den Blick als Vektor aus
-        public Vector2 gazePoint; // x/y Blick auf den Bildschirm, Eyetracking!!
+        // public Vector2 gazePoint; // x/y Blick auf den Bildschirm, Eyetracking!!
         public string currentScene; // ob Schloss oder Marktplatz und welcher
     }
 
@@ -61,7 +64,6 @@ public class TrackingLogger : MonoBehaviour
     public class ParticipantData
     {
         public List<EventData> events = new List<EventData>();
-        public float pauseDuration; // Zeit in Sekunden, die zwischen den Sessions vergangen ist
     }
 
     // Attribute für EventData
@@ -90,28 +92,12 @@ public class TrackingLogger : MonoBehaviour
     private float nextLogTime;
     private int logCount;
 
-    // Attribut zur Speicherung wie lange die Pause zwischen den Sessions geht
-    private float pauseDuration = 0f; // Zeit in Sekunden, die zwischen den Sessions vergangen ist
 
     /*
-    Die Methode GetArg() bekommt vom PythonSkript Daten übergeben und gibt sie als string zurück.
-    Hier konkret wichtig, um den playerKey für die participantID abzufangen.
-    */
-    private string GetArg(string name)
-    {
-        var args = System.Environment.GetCommandLineArgs();
-        for (int i = 0; i < args.Length; i++)
-            if (args[i].StartsWith(name + "="))
-                return args[i].Split('=')[1];
-        return null;
-    }
-
-
-    /*
-    Die Methode DetectLookedBuilding erkennt in der Welt. wo man geradeaus hinguckt (Blickrichtung).
+    Die Methode DetectLookedObject erkennt in der Welt. wo man geradeaus hinguckt (Blickrichtung).
     Dabei wird ein string vom Namen des Objektes gespeichert, z.B. Gebäude 
     */
-    private string DetectLookedBuilding()
+    private string DetectLookedObject()
     {
         RaycastHit hit;
         Vector3 gazeDirection = transform.forward; // Blickrichtung der Kamera
@@ -120,25 +106,6 @@ public class TrackingLogger : MonoBehaviour
             return hit.collider.gameObject.name;
         }
         return "No building";
-    }
-
-
-    /*
-    Die Methode DetectUIElement() erkennt in der Karte, wo man geradeaus hinguckt.
-    Dies gibt sie als string zurück.
-    (Blickerkennung)
-    */
-    private string DetectUIElement()
-    {
-        PointerEventData pointerData = new PointerEventData(eventSystem);
-        pointerData.position = new Vector2(Screen.width / 2, Screen.height / 2); // Blickzentrum
-        List<RaycastResult> results = new List<RaycastResult>();
-        uiRaycaster.Raycast(pointerData, results);
-        if (results.Count > 0)
-        {
-            return results[0].gameObject.name;
-        }
-        return "No UI-Element";
     }
 
 
@@ -164,7 +131,7 @@ public class TrackingLogger : MonoBehaviour
     /*
     Die Methode Start() Wird ein Mal beim Start des Spieles ausgeführt.
     Sie initialisiert die Zeitmessung,
-    sie bekommt den playerKey und die aktuelle Szene übergeben,
+    sie kreiert) den playerKey,
     sie bestimmt, wo die Datei gespeichert wird (dataPath).
     */
     void Start()
@@ -172,17 +139,45 @@ public class TrackingLogger : MonoBehaviour
         sessionStartTime = Time.time;
         nextLogTime = Time.time + loggingInterval;
 
-        // Kommandozeilenparameter auslesen
-        string playerKey = "30"; // GetArg("--playerKey");
+        try
+        {
+            String suffix = SceneManager.GetActiveScene().name.Contains("Schloss") ? "S" : "M";
+            int playerKey = 1;
 
-        participantId = playerKey;
+            while (true)
+            {
+                string fileS = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}S.csv");
+                string fileM = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}M.csv");
 
-        // Speicherpfad
-        // Application.persistentDataPath ist ein Unity-Standardpfad, der plattformunabhängig auf einen schreibbaren Speicherort zeigt,
-        // z. B.: unter Windows: C:/Users/USERNAME/AppData/LocalLow/CompanyName/ProductName
-        dataPath = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}.csv");
+                if (suffix == "S")
+                {
+                    // Wenn weder S noch M existieren → neue ID gefunden
+                    if (!File.Exists(fileS) && !File.Exists(fileM)) break;
+                }
+                else // suffix == "M"
+                {
+                    // Wenn S existiert, aber M noch nicht → passende ID gefunden
+                    if (File.Exists(fileS) && !File.Exists(fileM)) break;
+                }
 
-        Debug.Log("Tracking gestartet für Teilnehmer: " + playerKey);
+                playerKey++;
+            }
+
+
+            // Speicherpfad
+            // Application.persistentDataPath ist ein Unity-Standardpfad, der plattformunabhängig auf einen schreibbaren Speicherort zeigt,
+            // z. B.: unter Windows am Expra-PC: C:/Users/USERNAME/AppData/LocalLow/CompanyName/ProductName
+            dataPath = Path.Combine(Application.persistentDataPath, $"VR_VP_{playerKey}{suffix}.csv");
+
+            Debug.Log("Tracking gestartet für Teilnehmer: " + playerKey + suffix);
+
+
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Fehler in Methode Start(): " + e.Message);
+        }
+
     }
 
 
@@ -227,11 +222,6 @@ public class TrackingLogger : MonoBehaviour
                 return;
             }
             */
-            if (currentScene == "Pipipause")
-            {
-                pauseDuration += loggingInterval;
-                return;
-            }
 
 
             // Controller-Eingabe prüfen
@@ -254,38 +244,23 @@ public class TrackingLogger : MonoBehaviour
             }
             else if (isHoldingTrigger && isHoldingJoystick)
             {
-                // Joystick und Trigger beide gleichzeitig gedrückt
                 mapActive = true;
                 currentControllerInput = "Trigger + Joystick";
             }
             else
             {
+                // weder Joystick noch Trigger
                 currentControllerInput = "No Input";
                 mapActive = false;
             }
 
 
             // Raycast-basierte Blickerkennung
-            string gazeTargetName = mapActive ? DetectUIElement() : DetectLookedBuilding();
+            string gazeTargetName = DetectLookedObject();
 
             // Berechnet den 3D-Punkt im Raum, auf den geblickt wird
             Vector3Serializable gazeTargetVector = new Vector3Serializable(DetectLookedPoint());
 
-
-            // Blickposition als Dummy (kann durch echtes EyeTracking ersetzt werden)
-            Vector2 gazePos = new Vector2(0.5f, 0.5f); // Todo: Platzhalter
-
-            // Todo: hier wird Eyetracking implementiert
-            /*
-            InputDevice device = InputDevices.GetDeviceAtXRNode(XRNode.CenterEye);
-            if (device.TryGetFeatureValue(CommonUsages.eyesData, out Eyes eyes))
-            {
-              if (eyes.TryGetFixationPoint(out Vector3 gazeFixation))
-              {
-                 gazePoint = Camera.main.WorldToScreenPoint(gazeFixation);
-                }
-            }
-            */
 
             EventData newEvent = new EventData()
             {
@@ -298,7 +273,7 @@ public class TrackingLogger : MonoBehaviour
                 mapOpened = mapActive,
                 gazeTargetName = gazeTargetName,
                 gazeTargetVector = gazeTargetVector,
-                gazePoint = gazePos,
+                // gazePoint = gazePos,
                 currentScene = currentScene,
             };
 
@@ -308,7 +283,8 @@ public class TrackingLogger : MonoBehaviour
             nextLogTime += loggingInterval;
             logCount++;
 
-            // zusätzlcihe Speicherung, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
+            // zusätzliche Speicherung alle 30 Sekunden, damit nicht alle Daten verloren gehen, wenn das Programm abstürzt
+            // (Code funktioniert eigentlich so, dass die Speicherdatei bei Programmende ausgeführt wird)
             if (logCount % (int)(30f / loggingInterval) == 0) // alle 30 Sekunden
             {
                 SaveData();
@@ -328,10 +304,7 @@ public class TrackingLogger : MonoBehaviour
         StringBuilder csv = new StringBuilder();
 
         // Kopfzeile
-        csv.AppendLine("participantId,timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeVecX,gazeVecY,gazeVecZ,gazePointX,gazePointY,currentScene");
-
-        // Nur zum Schluss hinzugefügt wie lange die Pause zwischen den Sessions war
-        currentData.pauseDuration = pauseDuration;
+        csv.AppendLine("participantId,timestamp,posX,posY,posZ,rotX,rotY,rotZ,controllerInput,mapOpened,gazeTargetName,gazeVecX,gazeVecY,currentScene"); // gazeVecZ,gazePointX,gazePointY für EyeTracking hinzufügen
 
         try
         {
@@ -349,7 +322,7 @@ public class TrackingLogger : MonoBehaviour
                     e.mapOpened,
                     EscapeCSV(e.gazeTargetName),
                     e.gazeTargetVector.x, e.gazeTargetVector.y, e.gazeTargetVector.z,
-                    e.gazePoint.x, e.gazePoint.y,
+                    // e.gazePoint.x, e.gazePoint.y, // EyeTracking
                     EscapeCSV(e.currentScene)
                 );
                 csv.AppendLine(line);
@@ -365,6 +338,9 @@ public class TrackingLogger : MonoBehaviour
         Debug.Log("Daten gespeichert unter: " + dataPath);
     }
 
+    /*
+    Hilfsmethode für OnApplicationQuit(), um eine saubere Formatierung der CSV-Datei zu haben
+    */
     private string EscapeCSV(string input)
     {
         if (input.Contains(",") || input.Contains("\"") || input.Contains("\n"))
@@ -374,57 +350,44 @@ public class TrackingLogger : MonoBehaviour
         return input;
     }
 
- 
+
+    // -------------------------------------------------------------------
+    // Toter Code für Participant-Nummer-Übergabe und für Eyetracking
+    // -------------------------------------------------------------------
+
 
     /*
-    void OnApplicationQuit()
+    Die Methode GetArg() bekommt vom PythonSkript Daten übergeben und gibt sie als string zurück.
+    Hier konkret wichtig, um den playerKey für die participantID abzufangen.
+    */
+    /*
+    private string GetArg(string name)
     {
-
-        // Header-Zeile
-        string[] headers = new string[] {
-            "participantId", "timestamp",
-            "posX", "posY", "posZ",
-            "rotX", "rotY", "rotZ",
-            "controllerInput", "mapOpened",
-            "gazeTargetName",
-            "gazeVecX", "gazeVecY", "gazeVecZ",
-            "gazePointX", "gazePointY",
-            "currentScene"
-        };
-
-        StringBuilder sb = new StringBuilder();
-
-        // Header schreiben
-        sb.AppendLine(string.Join(",", headers));
-
-        // Datenzeilen schreiben
-        foreach (var data in currentData.events)
-        {
-            string[] row = new string[] {
-                data.participantId.ToString(),
-                data.timestamp.ToString("F3"),
-                data.position.x.ToString("F3"),
-                data.position.y.ToString("F3"),
-                data.position.z.ToString("F3"),
-                data.rotationEuler.x.ToString("F3"),
-                data.rotationEuler.y.ToString("F3"),
-                data.rotationEuler.z.ToString("F3"),
-                data.currentControllerInput,
-                data.mapOpened.ToString(),
-                data.gazeTargetName,
-                data.gazeTargetVector.x.ToString("F3"),
-                data.gazeTargetVector.y.ToString("F3"),
-                data.gazeTargetVector.z.ToString("F3"),
-                data.gazePoint.x.ToString("F3"),
-                data.gazePoint.y.ToString("F3"),
-                data.currentScene
-            };
-            sb.AppendLine(string.Join(",", row));
-        }
-
-        File.WriteAllText(dataPath, sb.ToString(), Encoding.UTF8);
-        Debug.Log("Tracking data saved to: " + dataPath);
+        var args = System.Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length; i++)
+            if (args[i].StartsWith(name + "="))
+                return args[i].Split('=')[1];
+        return null;
     }
     */
 
+    // Blickposition als Dummy (kann durch echtes EyeTracking ersetzt werden)
+    // Vector2 gazePos = new Vector2(0.5f, 0.5f); // Todo: Platzhalter
+
+    // Todo: hier wird Eyetracking implementiert
+    /*
+    InputDevice device = InputDevices.GetDeviceAtXRNode(XRNode.CenterEye);
+    if (device.TryGetFeatureValue(CommonUsages.eyesData, out Eyes eyes))
+    {
+        if (eyes.TryGetFixationPoint(out Vector3 gazeFixation))
+            {
+            gazePoint = Camera.main.WorldToScreenPoint(gazeFixation);
+            }
+        }
+    */
+
+
 }
+
+
+
